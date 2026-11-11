@@ -1,11 +1,11 @@
-"""Interface en ligne de commande : add, list, delete, summary."""
+"""Interface en ligne de commande : add, list, delete, rename, clear, summary."""
 import argparse
 import sys
 from datetime import datetime
 
 from notes_app.models import Note
 from notes_app.store import load_notes, notes_path, save_notes
-from notes_app.summary import filter_by_tag, remove_note, summarize
+from notes_app.summary import filter_by_tag, find_by_name, remove_note, rename_note, summarize
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,6 +18,9 @@ def build_parser() -> argparse.ArgumentParser:
     lst = sub.add_parser("list", help="lister les notes")
     lst.add_argument("--tag")
     sub.add_parser("delete", help="supprimer une note via un menu")
+    rename = sub.add_parser("rename", help="renommer une note")
+    rename.add_argument("old_name", metavar="ANCIEN", help="nom actuel de la note")
+    rename.add_argument("new_name", metavar="NOUVEAU", help="nouveau nom")
     clear = sub.add_parser("clear", help="supprimer toutes les notes")
     clear.add_argument("--yes", action="store_true", help="confirme la suppression de toutes les notes")
     sub.add_parser("summary", help="synthèse des notes")
@@ -60,6 +63,27 @@ def main(argv: list[str] | None = None) -> None:
         remove_note(notes, index)
         save_notes(path, notes)
         print("Note supprimée.")
+    elif args.command == "rename":
+        matches = find_by_name(notes, args.old_name)
+        if not matches:
+            print(f"Aucune note nommée « {args.old_name} ».", file=sys.stderr)
+            sys.exit(1)
+        if len(matches) > 1:
+            print(
+                f"{len(matches)} notes portent le nom « {args.old_name} », "
+                "renommage refusé :",
+                file=sys.stderr,
+            )
+            for n in matches:
+                print(f"- {n.created_at:%Y-%m-%d %H:%M} {n.text}", file=sys.stderr)
+            sys.exit(1)
+        try:
+            rename_note(matches[0], args.new_name)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(1)
+        save_notes(path, notes)
+        print("Note renommée.")
     elif args.command == "clear":
         if not notes:
             print("Aucune note.")

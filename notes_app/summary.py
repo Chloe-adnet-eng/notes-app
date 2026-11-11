@@ -15,6 +15,19 @@ def remove_note(notes: list[Note], index: int) -> Note:
     return notes.pop(index)
 
 
+def find_by_name(notes: list[Note], name: str) -> list[Note]:
+    """Renvoie les notes dont le nom est exactement `name`."""
+    return [n for n in notes if n.name == name]
+
+
+def rename_note(note: Note, new_name: str) -> None:
+    """Change le nom de la note ; refuse un nom vide."""
+    new_name = new_name.strip()
+    if not new_name:
+        raise ValueError("Le nouveau nom ne peut pas être vide.")
+    note.name = new_name
+
+
 def top_tags(notes: list[Note], limit: int = 3) -> list[tuple[str, int]]:
     counter = Counter(tag for n in notes for tag in n.tags)
     return counter.most_common(limit)

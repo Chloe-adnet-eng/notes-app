@@ -5,7 +5,14 @@ from pathlib import Path
 
 from notes_app.models import Note
 from notes_app.store import load_notes, save_notes
-from notes_app.summary import filter_by_tag, remove_note, summarize, top_tags
+from notes_app.summary import (
+    filter_by_tag,
+    find_by_name,
+    remove_note,
+    rename_note,
+    summarize,
+    top_tags,
+)
 
 
 def note(text, day, tags=()):
@@ -45,6 +52,31 @@ class RemoveNoteTest(unittest.TestCase):
         with self.assertRaises(IndexError):
             remove_note(notes, -1)
         self.assertEqual(len(notes), 1)
+
+
+class RenameNoteTest(unittest.TestCase):
+    def test_rename_note(self):
+        n = note("a", 1)
+        rename_note(n, "  Nouveau  ")
+        self.assertEqual(n.name, "Nouveau")
+
+    def test_rename_note_empty_name(self):
+        n = note("a", 1)
+        for bad in ("", "   "):
+            with self.assertRaises(ValueError):
+                rename_note(n, bad)
+        self.assertEqual(n.name, "a")
+
+    def test_find_by_name_not_found(self):
+        self.assertEqual(find_by_name([note("a", 1)], "zzz"), [])
+
+    def test_find_by_name_unique(self):
+        notes = [note("a", 1), note("b", 2)]
+        self.assertEqual([n.text for n in find_by_name(notes, "b")], ["b"])
+
+    def test_find_by_name_duplicates(self):
+        notes = [note("a", 1), note("a", 2), note("b", 3)]
+        self.assertEqual(len(find_by_name(notes, "a")), 2)
 
 
 class NameTest(unittest.TestCase):
