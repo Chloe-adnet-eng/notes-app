@@ -1,11 +1,11 @@
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from notes_app.models import Note
 from notes_app.store import load_notes, save_notes
-from notes_app.summary import filter_by_tag, remove_note, summarize, top_tags
+from notes_app.summary import filter_by_day, filter_by_tag, remove_note, summarize, top_tags
 
 
 def note(text, day, tags=()):
@@ -67,6 +67,22 @@ class NameTest(unittest.TestCase):
     def test_name_roundtrip(self):
         n = Note(text="t", created_at=datetime(2026, 11, 1), name="Plombier")
         self.assertEqual(Note.from_dict(n.to_dict()).name, "Plombier")
+
+
+class FilterByDayTest(unittest.TestCase):
+    def test_keeps_only_notes_of_given_day(self):
+        notes = [
+            Note(text="matin", created_at=datetime(2026, 11, 5, 0, 0)),
+            Note(text="soir", created_at=datetime(2026, 11, 5, 23, 59)),
+            Note(text="veille", created_at=datetime(2026, 11, 4, 23, 59)),
+            Note(text="lendemain", created_at=datetime(2026, 11, 6, 0, 0)),
+        ]
+        kept = filter_by_day(notes, date(2026, 11, 5))
+        self.assertEqual([n.text for n in kept], ["matin", "soir"])
+
+    def test_no_match_gives_empty_list(self):
+        notes = [Note(text="a", created_at=datetime(2026, 11, 1))]
+        self.assertEqual(filter_by_day(notes, date(2026, 11, 5)), [])
 
 
 class StoreTest(unittest.TestCase):
