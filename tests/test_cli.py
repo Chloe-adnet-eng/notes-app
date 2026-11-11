@@ -55,5 +55,39 @@ class ClearCommandTest(unittest.TestCase):
         self.assertEqual(out.strip(), "Aucune note.")
 
 
+class TodayCommandTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.path = Path(tmp.name) / "notes.json"
+        patcher = mock.patch.dict(os.environ, {"NOTES_FILE": str(self.path)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def run_main(self, *argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            main(list(argv))
+        return out.getvalue()
+
+    def test_today_summarizes_only_todays_notes(self):
+        save_notes(self.path, [
+            Note(text="ancienne", created_at=datetime(2020, 1, 1, 9, 0), tags=["vieux"]),
+            Note(text="du jour", created_at=datetime.now(), tags=["neuf"]),
+        ])
+        out = self.run_main("today")
+        self.assertIn("1 note(s).", out)
+        self.assertIn("du jour", out)
+        self.assertIn("neuf", out)
+        self.assertNotIn("ancienne", out)
+        self.assertNotIn("vieux", out)
+
+    def test_today_without_notes_of_the_day(self):
+        save_notes(self.path, [
+            Note(text="ancienne", created_at=datetime(2020, 1, 1, 9, 0)),
+        ])
+        self.assertEqual(self.run_main("today").strip(), "Aucune note aujourd'hui.")
+
+
 if __name__ == "__main__":
     unittest.main()

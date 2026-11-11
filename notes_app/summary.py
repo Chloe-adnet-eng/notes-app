@@ -1,11 +1,18 @@
 """Synthèse des notes : nombre, tags les plus fréquents, notes récentes."""
 from collections import Counter
+from datetime import date
 
 from notes_app.models import Note
 
 
 def filter_by_tag(notes: list[Note], tag: str) -> list[Note]:
     return [n for n in notes if tag in n.tags]
+
+
+def filter_by_day(notes: list[Note], day: date | None = None) -> list[Note]:
+    """Garde les notes créées le jour donné (aujourd'hui par défaut)."""
+    day = day or date.today()
+    return [n for n in notes if n.created_at.date() == day]
 
 
 def remove_note(notes: list[Note], index: int) -> Note:

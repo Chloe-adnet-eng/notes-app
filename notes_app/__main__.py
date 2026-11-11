@@ -1,11 +1,11 @@
-"""Interface en ligne de commande : add, list, delete, summary."""
+"""Interface en ligne de commande : add, list, delete, clear, summary, today."""
 import argparse
 import sys
 from datetime import datetime
 
 from notes_app.models import Note
 from notes_app.store import load_notes, notes_path, save_notes
-from notes_app.summary import filter_by_tag, remove_note, summarize
+from notes_app.summary import filter_by_day, filter_by_tag, remove_note, summarize
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,6 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
     clear = sub.add_parser("clear", help="supprimer toutes les notes")
     clear.add_argument("--yes", action="store_true", help="confirme la suppression de toutes les notes")
     sub.add_parser("summary", help="synthèse des notes")
+    sub.add_parser("today", help="synthèse des notes du jour")
     return parser
 
 
@@ -80,6 +81,9 @@ def main(argv: list[str] | None = None) -> None:
             print(f"{n.created_at:%Y-%m-%d %H:%M} {n.name} : {n.text}{tags}")
     elif args.command == "summary":
         print(summarize(notes))
+    elif args.command == "today":
+        today = filter_by_day(notes)
+        print(summarize(today) if today else "Aucune note aujourd'hui.")
 
 
 if __name__ == "__main__":
