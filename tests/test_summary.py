@@ -5,7 +5,7 @@ from pathlib import Path
 
 from notes_app.models import Note
 from notes_app.store import load_notes, save_notes
-from notes_app.summary import filter_by_tag, summarize, top_tags
+from notes_app.summary import filter_by_tag, remove_note, summarize, top_tags
 
 
 def note(text, day, tags=()):
@@ -29,6 +29,44 @@ class SummaryTest(unittest.TestCase):
     def test_filter_by_tag(self):
         notes = [note("a", 1, ["x"]), note("b", 2)]
         self.assertEqual([n.text for n in filter_by_tag(notes, "x")], ["a"])
+
+
+class RemoveNoteTest(unittest.TestCase):
+    def test_remove_note(self):
+        notes = [note("a", 1), note("b", 2), note("c", 3)]
+        removed = remove_note(notes, 1)
+        self.assertEqual(removed.text, "b")
+        self.assertEqual([n.text for n in notes], ["a", "c"])
+
+    def test_remove_note_invalid_index(self):
+        notes = [note("a", 1)]
+        with self.assertRaises(IndexError):
+            remove_note(notes, 1)
+        with self.assertRaises(IndexError):
+            remove_note(notes, -1)
+        self.assertEqual(len(notes), 1)
+
+
+class NameTest(unittest.TestCase):
+    def test_default_name_from_text(self):
+        self.assertEqual(note("Appeler le plombier", 1).name, "Appeler le plombier")
+
+    def test_default_name_is_truncated_first_line(self):
+        n = note("x" * 100 + "\nsuite", 1)
+        self.assertLessEqual(len(n.name), 40)
+        self.assertNotIn("\n", n.name)
+
+    def test_explicit_name_kept(self):
+        n = Note(text="t", created_at=datetime(2026, 11, 1), name="Plombier")
+        self.assertEqual(n.name, "Plombier")
+
+    def test_old_note_without_name_gets_default(self):
+        data = {"text": "Vieille note", "created_at": "2026-11-01T09:00:00", "tags": []}
+        self.assertEqual(Note.from_dict(data).name, "Vieille note")
+
+    def test_name_roundtrip(self):
+        n = Note(text="t", created_at=datetime(2026, 11, 1), name="Plombier")
+        self.assertEqual(Note.from_dict(n.to_dict()).name, "Plombier")
 
 
 class StoreTest(unittest.TestCase):

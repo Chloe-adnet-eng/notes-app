@@ -8,6 +8,13 @@ def filter_by_tag(notes: list[Note], tag: str) -> list[Note]:
     return [n for n in notes if tag in n.tags]
 
 
+def remove_note(notes: list[Note], index: int) -> Note:
+    """Retire et renvoie la note à la position donnée (0 = première)."""
+    if not 0 <= index < len(notes):
+        raise IndexError(f"Position de note invalide : {index}")
+    return notes.pop(index)
+
+
 def top_tags(notes: list[Note], limit: int = 3) -> list[tuple[str, int]]:
     counter = Counter(tag for n in notes for tag in n.tags)
     return counter.most_common(limit)
