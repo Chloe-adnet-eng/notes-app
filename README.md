@@ -10,10 +10,13 @@ python -m notes_app add "Appeler le plombier" --name "Plombier"
 python -m notes_app list
 python -m notes_app list --tag maison
 python -m notes_app delete
+python -m notes_app clear
+python -m notes_app clear --yes
 python -m notes_app summary
 ```
 `--name` est facultatif : sans lui, le nom est déduit du début du texte.
 `delete` affiche un menu numéroté avec le nom de chaque note ; une saisie vide annule.
+`clear` supprime toutes les notes après confirmation (« o ») ; `--yes` passe la confirmation.
 Les notes sont stockées dans `notes.json` (ou le fichier indiqué par `NOTES_FILE`).
 
 ## Tests

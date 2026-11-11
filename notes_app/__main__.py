@@ -1,4 +1,4 @@
-"""Interface en ligne de commande : add, list, delete, summary."""
+"""Interface en ligne de commande : add, list, delete, clear, summary."""
 import argparse
 from datetime import datetime
 
@@ -17,8 +17,19 @@ def build_parser() -> argparse.ArgumentParser:
     lst = sub.add_parser("list", help="lister les notes")
     lst.add_argument("--tag")
     sub.add_parser("delete", help="supprimer une note via un menu")
+    clear = sub.add_parser("clear", help="supprimer toutes les notes")
+    clear.add_argument("--yes", action="store_true", help="ne pas demander de confirmation")
     sub.add_parser("summary", help="synthèse des notes")
     return parser
+
+
+def confirm_clear(count: int) -> bool:
+    """Demande confirmation ; toute réponse autre que « o » ou une fin d'entrée annule."""
+    try:
+        answer = input(f"Supprimer {count} notes ? [o/N] ").strip().lower()
+    except EOFError:
+        return False
+    return answer == "o"
 
 
 def choose_note(notes: list[Note]) -> int | None:
@@ -57,6 +68,15 @@ def main(argv: list[str] | None = None) -> None:
         remove_note(notes, index)
         save_notes(path, notes)
         print("Note supprimée.")
+    elif args.command == "clear":
+        if not notes:
+            print("Aucune note.")
+            return
+        if not args.yes and not confirm_clear(len(notes)):
+            print("Annulé.")
+            return
+        save_notes(path, [])
+        print(f"{len(notes)} notes supprimées.")
     elif args.command == "list":
         shown = filter_by_tag(notes, args.tag) if args.tag else notes
         for n in shown:
