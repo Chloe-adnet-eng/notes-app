@@ -1,5 +1,6 @@
 """Interface en ligne de commande : add, list, delete, summary."""
 import argparse
+import sys
 from datetime import datetime
 
 from notes_app.models import Note
@@ -17,6 +18,8 @@ def build_parser() -> argparse.ArgumentParser:
     lst = sub.add_parser("list", help="lister les notes")
     lst.add_argument("--tag")
     sub.add_parser("delete", help="supprimer une note via un menu")
+    clear = sub.add_parser("clear", help="supprimer toutes les notes")
+    clear.add_argument("--yes", action="store_true", help="confirme la suppression de toutes les notes")
     sub.add_parser("summary", help="synthèse des notes")
     return parser
 
@@ -57,6 +60,19 @@ def main(argv: list[str] | None = None) -> None:
         remove_note(notes, index)
         save_notes(path, notes)
         print("Note supprimée.")
+    elif args.command == "clear":
+        if not notes:
+            print("Aucune note.")
+            return
+        if not args.yes:
+            print(
+                f"Refus : cette commande supprime les {len(notes)} notes. "
+                "Relance avec --yes pour confirmer : python -m notes_app clear --yes",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        save_notes(path, [])
+        print(f"{len(notes)} note(s) supprimée(s).")
     elif args.command == "list":
         shown = filter_by_tag(notes, args.tag) if args.tag else notes
         for n in shown:
