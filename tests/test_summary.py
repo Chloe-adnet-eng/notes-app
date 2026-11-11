@@ -5,7 +5,7 @@ from pathlib import Path
 
 from notes_app.models import Note
 from notes_app.store import load_notes, save_notes
-from notes_app.summary import filter_by_tag, remove_note, summarize, top_tags
+from notes_app.summary import filter_by_tag, remove_note, summarize, top_tags, update_note_text
 
 
 def note(text, day, tags=()):
@@ -45,6 +45,34 @@ class RemoveNoteTest(unittest.TestCase):
         with self.assertRaises(IndexError):
             remove_note(notes, -1)
         self.assertEqual(len(notes), 1)
+
+
+class UpdateNoteTextTest(unittest.TestCase):
+    def test_update_text_keeps_tags_and_date(self):
+        notes = [note("a", 1), note("b", 2, ["x"])]
+        update_note_text(notes, 1, "nouveau")
+        self.assertEqual(notes[1].text, "nouveau")
+        self.assertEqual(notes[1].tags, ["x"])
+        self.assertEqual(notes[1].created_at, datetime(2026, 11, 2, 9, 0))
+        self.assertEqual(notes[0].text, "a")
+
+    def test_derived_name_follows_new_text(self):
+        notes = [note("ancien", 1)]
+        update_note_text(notes, 0, "nouveau")
+        self.assertEqual(notes[0].name, "nouveau")
+
+    def test_explicit_name_kept(self):
+        notes = [Note(text="ancien", created_at=datetime(2026, 11, 1), name="Plombier")]
+        update_note_text(notes, 0, "nouveau")
+        self.assertEqual(notes[0].name, "Plombier")
+
+    def test_update_invalid_index(self):
+        notes = [note("a", 1)]
+        with self.assertRaises(IndexError):
+            update_note_text(notes, 1, "x")
+        with self.assertRaises(IndexError):
+            update_note_text(notes, -1, "x")
+        self.assertEqual(notes[0].text, "a")
 
 
 class NameTest(unittest.TestCase):

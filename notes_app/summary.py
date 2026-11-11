@@ -1,7 +1,7 @@
 """Synthèse des notes : nombre, tags les plus fréquents, notes récentes."""
 from collections import Counter
 
-from notes_app.models import Note
+from notes_app.models import Note, default_name
 
 
 def filter_by_tag(notes: list[Note], tag: str) -> list[Note]:
@@ -13,6 +13,21 @@ def remove_note(notes: list[Note], index: int) -> Note:
     if not 0 <= index < len(notes):
         raise IndexError(f"Position de note invalide : {index}")
     return notes.pop(index)
+
+
+def update_note_text(notes: list[Note], index: int, text: str) -> Note:
+    """Remplace le texte de la note à la position donnée (0 = première).
+
+    Le nom est recalculé s'il était déduit de l'ancien texte ; un nom
+    explicite est conservé. Tags et date de création ne changent pas.
+    """
+    if not 0 <= index < len(notes):
+        raise IndexError(f"Position de note invalide : {index}")
+    target = notes[index]
+    if target.name == default_name(target.text):
+        target.name = default_name(text)
+    target.text = text
+    return target
 
 
 def top_tags(notes: list[Note], limit: int = 3) -> list[tuple[str, int]]:
