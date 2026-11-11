@@ -17,27 +17,13 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--name", default="", help="nom de la note (par défaut : début du texte)")
     lst = sub.add_parser("list", help="lister les notes")
     lst.add_argument("--tag")
-    sub.add_parser("delete", help="supprimer une note via un menu")
+    delete = sub.add_parser("delete", help="supprimer une note par son numéro")
+    delete.add_argument("number", type=int, help="numéro de la note (voir `list`), à partir de 1")
+    delete.add_argument("--yes", action="store_true", help="confirme la suppression")
     clear = sub.add_parser("clear", help="supprimer toutes les notes")
     clear.add_argument("--yes", action="store_true", help="confirme la suppression de toutes les notes")
     sub.add_parser("summary", help="synthèse des notes")
     return parser
-
-
-def choose_note(notes: list[Note]) -> int | None:
-    """Affiche le menu et renvoie la position choisie, ou None si annulé."""
-    for i, n in enumerate(notes, start=1):
-        print(f"{i}. {n.name}")
-    while True:
-        try:
-            answer = input("Numéro de la note à supprimer (vide pour annuler) : ").strip()
-        except EOFError:
-            return None
-        if not answer:
-            return None
-        if answer.isdigit() and 1 <= int(answer) <= len(notes):
-            return int(answer) - 1
-        print("Choix invalide.")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -53,11 +39,21 @@ def main(argv: list[str] | None = None) -> None:
         if not notes:
             print("Aucune note.")
             return
-        index = choose_note(notes)
-        if index is None:
-            print("Annulé.")
-            return
-        remove_note(notes, index)
+        if not 1 <= args.number <= len(notes):
+            print(
+                f"Numéro invalide : {args.number} (il y a {len(notes)} note(s), "
+                "numérotées à partir de 1).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if not args.yes:
+            print(
+                f"Refus : cette commande supprime la note {args.number} ({notes[args.number - 1].name}). "
+                f"Relance avec --yes pour confirmer : python -m notes_app delete {args.number} --yes",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        remove_note(notes, args.number - 1)
         save_notes(path, notes)
         print("Note supprimée.")
     elif args.command == "clear":
@@ -76,8 +72,9 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "list":
         shown = filter_by_tag(notes, args.tag) if args.tag else notes
         for n in shown:
+            number = next(i for i, other in enumerate(notes, start=1) if other is n)
             tags = f" [{', '.join(n.tags)}]" if n.tags else ""
-            print(f"{n.created_at:%Y-%m-%d %H:%M} {n.name} : {n.text}{tags}")
+            print(f"{number}. {n.created_at:%Y-%m-%d %H:%M} {n.name} : {n.text}{tags}")
     elif args.command == "summary":
         print(summarize(notes))
 
