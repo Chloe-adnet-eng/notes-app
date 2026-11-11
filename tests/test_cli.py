@@ -89,5 +89,35 @@ class TodayCommandTest(unittest.TestCase):
         self.assertEqual(self.run_main("today").strip(), "Aucune note aujourd'hui.")
 
 
+class SearchCommandTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.path = Path(tmp.name) / "notes.json"
+        patcher = mock.patch.dict(os.environ, {"NOTES_FILE": str(self.path)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        save_notes(self.path, [
+            Note(text="Appeler le plombier", created_at=datetime(2026, 11, 1, 9, 0), tags=["maison"]),
+            Note(text="Acheter du pain", created_at=datetime(2026, 11, 2, 9, 0)),
+        ])
+
+    def run_main(self, *argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            main(list(argv))
+        return out.getvalue()
+
+    def test_search_prints_matching_notes(self):
+        out = self.run_main("search", "PLOMBIER")
+        self.assertIn("Appeler le plombier", out)
+        self.assertIn("[maison]", out)
+        self.assertNotIn("pain", out)
+
+    def test_search_without_result(self):
+        out = self.run_main("search", "zzz")
+        self.assertEqual(out.strip(), "Aucune note trouvée.")
+
+
 if __name__ == "__main__":
     unittest.main()

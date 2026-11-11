@@ -5,7 +5,14 @@ from pathlib import Path
 
 from notes_app.models import Note
 from notes_app.store import load_notes, save_notes
-from notes_app.summary import filter_by_day, filter_by_tag, remove_note, summarize, top_tags
+from notes_app.summary import (
+    filter_by_day,
+    filter_by_tag,
+    remove_note,
+    search_notes,
+    summarize,
+    top_tags,
+)
 
 
 def note(text, day, tags=()):
@@ -29,6 +36,30 @@ class SummaryTest(unittest.TestCase):
     def test_filter_by_tag(self):
         notes = [note("a", 1, ["x"]), note("b", 2)]
         self.assertEqual([n.text for n in filter_by_tag(notes, "x")], ["a"])
+
+
+class SearchNotesTest(unittest.TestCase):
+    def test_search_in_text_ignores_case(self):
+        notes = [note("Appeler le Plombier", 1), note("autre", 2)]
+        self.assertEqual([n.text for n in search_notes(notes, "plombier")], ["Appeler le Plombier"])
+
+    def test_search_in_name(self):
+        notes = [
+            Note(text="x", created_at=datetime(2026, 11, 1), name="Plombier"),
+            note("y", 2),
+        ]
+        self.assertEqual([n.text for n in search_notes(notes, "PLOMB")], ["x"])
+
+    def test_search_in_tags(self):
+        notes = [note("a", 1, ["Maison"]), note("b", 2, ["travail"])]
+        self.assertEqual([n.text for n in search_notes(notes, "maison")], ["a"])
+
+    def test_search_is_substring(self):
+        notes = [note("un chaton", 1)]
+        self.assertEqual(len(search_notes(notes, "chat")), 1)
+
+    def test_search_no_match(self):
+        self.assertEqual(search_notes([note("a", 1)], "zzz"), [])
 
 
 class RemoveNoteTest(unittest.TestCase):

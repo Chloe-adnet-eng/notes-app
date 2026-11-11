@@ -1,11 +1,11 @@
-"""Interface en ligne de commande : add, list, delete, clear, summary, today."""
+"""Interface en ligne de commande : add, list, search, delete, clear, summary, today."""
 import argparse
 import sys
 from datetime import datetime
 
 from notes_app.models import Note
 from notes_app.store import load_notes, notes_path, save_notes
-from notes_app.summary import filter_by_day, filter_by_tag, remove_note, summarize
+from notes_app.summary import filter_by_day, filter_by_tag, remove_note, search_notes, summarize
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -17,12 +17,21 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--name", default="", help="nom de la note (par défaut : début du texte)")
     lst = sub.add_parser("list", help="lister les notes")
     lst.add_argument("--tag")
+    search = sub.add_parser("search", help="rechercher un mot dans les notes")
+    search.add_argument("word")
     sub.add_parser("delete", help="supprimer une note via un menu")
     clear = sub.add_parser("clear", help="supprimer toutes les notes")
     clear.add_argument("--yes", action="store_true", help="confirme la suppression de toutes les notes")
     sub.add_parser("summary", help="synthèse des notes")
     sub.add_parser("today", help="synthèse des notes du jour")
     return parser
+
+
+def print_notes(notes: list[Note]) -> None:
+    """Affiche une note par ligne (format de la commande list)."""
+    for n in notes:
+        tags = f" [{', '.join(n.tags)}]" if n.tags else ""
+        print(f"{n.created_at:%Y-%m-%d %H:%M} {n.name} : {n.text}{tags}")
 
 
 def choose_note(notes: list[Note]) -> int | None:
@@ -76,9 +85,13 @@ def main(argv: list[str] | None = None) -> None:
         print(f"{len(notes)} note(s) supprimée(s).")
     elif args.command == "list":
         shown = filter_by_tag(notes, args.tag) if args.tag else notes
-        for n in shown:
-            tags = f" [{', '.join(n.tags)}]" if n.tags else ""
-            print(f"{n.created_at:%Y-%m-%d %H:%M} {n.name} : {n.text}{tags}")
+        print_notes(shown)
+    elif args.command == "search":
+        found = search_notes(notes, args.word)
+        if found:
+            print_notes(found)
+        else:
+            print("Aucune note trouvée.")
     elif args.command == "summary":
         print(summarize(notes))
     elif args.command == "today":

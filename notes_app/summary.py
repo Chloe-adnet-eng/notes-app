@@ -15,6 +15,17 @@ def filter_by_day(notes: list[Note], day: date | None = None) -> list[Note]:
     return [n for n in notes if n.created_at.date() == day]
 
 
+def search_notes(notes: list[Note], word: str) -> list[Note]:
+    """Garde les notes dont le texte, le nom ou un tag contient le mot (sans tenir compte de la casse)."""
+    needle = word.casefold()
+    return [
+        n for n in notes
+        if needle in n.text.casefold()
+        or needle in n.name.casefold()
+        or any(needle in t.casefold() for t in n.tags)
+    ]
+
+
 def remove_note(notes: list[Note], index: int) -> Note:
     """Retire et renvoie la note à la position donnée (0 = première)."""
     if not 0 <= index < len(notes):
