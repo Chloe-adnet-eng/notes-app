@@ -55,5 +55,42 @@ class ClearCommandTest(unittest.TestCase):
         self.assertEqual(out.strip(), "Aucune note.")
 
 
+class AddDuplicateNameTest(unittest.TestCase):
+    run_main = ClearCommandTest.run_main
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.path = Path(tmp.name) / "notes.json"
+        patcher = mock.patch.dict(os.environ, {"NOTES_FILE": str(self.path)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        save_notes(self.path, [
+            Note(text="x", created_at=datetime(2026, 11, 1, 9, 0), name="Courses"),
+        ])
+
+    def test_duplicate_name_refused(self):
+        code, out, err = self.run_main("add", "autre", "--name", "Courses")
+        self.assertEqual(code, 1)
+        self.assertIn("Courses", err)
+        self.assertEqual(len(load_notes(self.path)), 1)
+
+    def test_duplicate_name_refused_ignoring_case_and_spaces(self):
+        code, _, _ = self.run_main("add", "autre", "--name", "  courses ")
+        self.assertEqual(code, 1)
+        self.assertEqual(len(load_notes(self.path)), 1)
+
+    def test_derived_name_duplicate_refused(self):
+        self.run_main("add", "Idée géniale")
+        code, _, _ = self.run_main("add", "idée géniale\nsuite")
+        self.assertEqual(code, 1)
+        self.assertEqual(len(load_notes(self.path)), 2)
+
+    def test_distinct_name_accepted(self):
+        code, _, _ = self.run_main("add", "autre", "--name", "Travail")
+        self.assertIsNone(code)
+        self.assertEqual(len(load_notes(self.path)), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

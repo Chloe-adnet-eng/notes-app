@@ -24,6 +24,20 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def format_note_line(index: int, note: Note, excerpt_limit: int = 40) -> str:
+    """Ligne de menu : numéro, nom, date et extrait du texte."""
+    excerpt = " ".join(note.text.split())
+    if len(excerpt) > excerpt_limit:
+        excerpt = excerpt[: excerpt_limit - 1].rstrip() + "…"
+    return f"{index}. {note.name} ({note.created_at:%Y-%m-%d %H:%M}) {excerpt}"
+
+
+def name_exists(notes: list[Note], name: str) -> bool:
+    """Vrai si une note porte déjà ce nom (casse et espaces alentour ignorés)."""
+    wanted = name.strip().casefold()
+    return any(n.name.strip().casefold() == wanted for n in notes)
+
+
 def move_selection(current: int, delta: int, count: int) -> int:
     """Déplace la sélection de `delta` positions en bouclant aux extrémités."""
     return (current + delta) % count
@@ -48,7 +62,7 @@ def _curses_menu(stdscr, notes: list[Note]) -> int | None:
                        max(0, width - 1))
         for row, i in enumerate(range(top, min(len(notes), top + visible)), start=1):
             attr = curses.A_REVERSE if i == current else curses.A_NORMAL
-            stdscr.addnstr(row, 0, f"{i + 1}. {notes[i].name}", max(0, width - 1), attr)
+            stdscr.addnstr(row, 0, format_note_line(i + 1, notes[i]), max(0, width - 1), attr)
         stdscr.refresh()
         key = stdscr.getch()
         if key == curses.KEY_UP:
@@ -63,7 +77,7 @@ def _curses_menu(stdscr, notes: list[Note]) -> int | None:
 
 def _numbered_menu(notes: list[Note]) -> int | None:
     for i, n in enumerate(notes, start=1):
-        print(f"{i}. {n.name}")
+        print(format_note_line(i, n))
     while True:
         try:
             answer = input("Numéro de la note à supprimer (vide pour annuler) : ").strip()
@@ -98,7 +112,12 @@ def main(argv: list[str] | None = None) -> None:
     notes = load_notes(path)
     if args.command == "add":
         tags = [t.strip() for t in args.tags.split(",") if t.strip()]
-        notes.append(Note(text=args.text, created_at=datetime.now(), tags=tags, name=args.name))
+        note = Note(text=args.text, created_at=datetime.now(), tags=tags, name=args.name)
+        if name_exists(notes, note.name):
+            print(f"Refus : une note nommée « {note.name} » existe déjà. "
+                  "Choisis un autre nom avec --name.", file=sys.stderr)
+            sys.exit(1)
+        notes.append(note)
         save_notes(path, notes)
         print("Note ajoutée.")
     elif args.command == "delete":
