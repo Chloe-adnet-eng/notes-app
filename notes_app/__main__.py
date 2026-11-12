@@ -24,8 +24,44 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def choose_note(notes: list[Note]) -> int | None:
-    """Affiche le menu et renvoie la position choisie, ou None si annulé."""
+def move_selection(current: int, delta: int, count: int) -> int:
+    """Déplace la sélection de `delta` positions en bouclant aux extrémités."""
+    return (current + delta) % count
+
+
+def _curses_menu(stdscr, notes: list[Note]) -> int | None:
+    import curses
+
+    curses.curs_set(0)
+    stdscr.keypad(True)
+    current = 0
+    top = 0
+    while True:
+        height, width = stdscr.getmaxyx()
+        visible = max(1, height - 2)
+        if current < top:
+            top = current
+        elif current >= top + visible:
+            top = current - visible + 1
+        stdscr.erase()
+        stdscr.addnstr(0, 0, "↑/↓ pour choisir, Entrée pour supprimer, q/Échap pour annuler",
+                       max(0, width - 1))
+        for row, i in enumerate(range(top, min(len(notes), top + visible)), start=1):
+            attr = curses.A_REVERSE if i == current else curses.A_NORMAL
+            stdscr.addnstr(row, 0, f"{i + 1}. {notes[i].name}", max(0, width - 1), attr)
+        stdscr.refresh()
+        key = stdscr.getch()
+        if key == curses.KEY_UP:
+            current = move_selection(current, -1, len(notes))
+        elif key == curses.KEY_DOWN:
+            current = move_selection(current, 1, len(notes))
+        elif key in (curses.KEY_ENTER, 10, 13):
+            return current
+        elif key in (ord("q"), 27):
+            return None
+
+
+def _numbered_menu(notes: list[Note]) -> int | None:
     for i, n in enumerate(notes, start=1):
         print(f"{i}. {n.name}")
     while True:
@@ -38,6 +74,22 @@ def choose_note(notes: list[Note]) -> int | None:
         if answer.isdigit() and 1 <= int(answer) <= len(notes):
             return int(answer) - 1
         print("Choix invalide.")
+
+
+def choose_note(notes: list[Note]) -> int | None:
+    """Affiche le menu et renvoie la position choisie, ou None si annulé.
+
+    Menu à flèches via curses dans un vrai terminal ; sinon menu numéroté.
+    """
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        try:
+            import curses
+        except ImportError:
+            return _numbered_menu(notes)
+        import os
+        os.environ.setdefault("ESCDELAY", "25")
+        return curses.wrapper(_curses_menu, notes)
+    return _numbered_menu(notes)
 
 
 def main(argv: list[str] | None = None) -> None:
